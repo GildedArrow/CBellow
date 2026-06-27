@@ -15,8 +15,6 @@ add #1, #2, 3
 mov #2, 1
 mov #3, 2
 
-=
-
 dec 0
 jnz loop, #0
 
