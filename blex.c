@@ -1,14 +1,38 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
 
 #include "blex.h"
 
-static const char *BReservedKeywords[] = {
+/*static const char *BReservedKeywords[] = {
 	"mov", "add", "sub", "div", "mul", "mod",
-	"prc", "jmp", "jnz", "jsr", "jz", "ret",
+	"out", "jmp", "jnz", "jsr", "jz", "ret",
 	"inc", "dec", "cmp", "inp"
 };
+*/
+
+static const BL_Keyword BReservedKeywords[] = {
+	{"mov", MOV},
+	{"add", ADD},
+	{"sub", SUB},
+	{"div", DIV},
+	{"mul", MUL},
+	{"mod", MOD},
+	{"shr", SHR},
+	{"shl", SHL},
+	{"inc", INC},
+	{"dec", DEC},	
+	{"jmp", JMP},
+	{"jnz", JNZ},
+	{"jsr", JSR},
+	{"jz", JZ},
+	{"out", OUT},
+	{"input", INPUT},
+	{"ret", RET}
+};
+
+static bool lex_debug = false;
 
 void loadSource(BLexer *lexer, const char *filename) {
 	FILE *file = fopen(filename, "rb");
@@ -58,6 +82,7 @@ BLexer *createBellowLexer(const char *source) {
 	loadSource(lexer, source);
 	
 	lexer->line = 1;
+	lexer->col = 1; 
 	lexer->pos = 0;
 	lexer->haderror = false;
 	
@@ -74,7 +99,7 @@ char advance(BLexer *lexer) {
 	
 	if (c == '\n') {
 		lexer->line++;
-		lexer->col = 0;
+		lexer->col = 1;
 	} else {
 		lexer->col++;
 	}
@@ -83,7 +108,7 @@ char advance(BLexer *lexer) {
 }
 
 char peek(BLexer *lexer) {
-	return lexer->pos + 1;
+	return lexer->src[lexer->pos];
 }
 
 bool isAlpha(char c) {
@@ -103,11 +128,17 @@ bool isEof(BLexer *lexer) {
 }
 
 void skipWhitespace(BLexer *lexer) {
+	
 	for (;;) {
 		char c = peek(lexer);
 		
 		if (c == ' ' || c == '\t' || c == '\r') {
 			advance(lexer);
+			
+			if (lex_debug) {
+				printf("Skipping whitespace\n");
+			}
+			
 			continue;
 		}
 		
@@ -115,6 +146,11 @@ void skipWhitespace(BLexer *lexer) {
 			while (!isEof(lexer) && peek(lexer) != '\n') {
 				advance(lexer);
 			}
+			
+			if (lex_debug) {
+				printf("Skipping comments\n");
+			}
+			
 			continue;
 		}
 		
@@ -122,39 +158,126 @@ void skipWhitespace(BLexer *lexer) {
 	}
 }
 
-BToken instructionOrLabel(BLexer *lexer) {
-	
-}
-
-BToken number(BLexer *lexer) {
-	
-}
-
-BToken makeToken(BLexer *lexer, BLexTokenType type) {
-	BToken t;
+BL_Token makeToken(BLexer *lexer, BL_TokenType type) {
+	BL_Token t;
 	
 	t.type = type;
 	t.line = lexer->line;
 	t.col = lexer->col;
 	
+	if (lex_debug) {
+		printf("MAKING TOKEN %d %d\n", t.line, t.col);
+	}
+	
 	return t;
 }
 
-void printBLexToken(BToken t) {
+
+BL_Token instructionOrLabel(BLexer *lexer) {
+	int keyword_count = sizeof(BReservedKeywords)/sizeof(BReservedKeywords[0]);
+	
+	int start = lexer->pos - 1;
+	
+	while (isAlphaNumeric(peek(lexer))) {
+		advance(lexer);
+	}
+	
+	int length = lexer->pos - start;
+	
+	char *startpos = lexer->src + start;
+	BL_Token t;
+	
+	for (int i = 0; i < keyword_count; i++) {
+		BL_Keyword k = BReservedKeywords[i];
+		
+		if (length == strlen(k.string) && memcmp(startpos, k.string, length) == 0) {
+			t = makeToken(lexer, LEX_INSTRUCTION);
+			t.data.keyword = k.keyword;
+			
+			return t;
+		}
+	}
+	
+	t = makeToken(lexer, LEX_LABEL);
+	t.data.string.length = length;
+	t.data.string.start = startpos;
+	
+	return t;
+}
+
+BL_Token number(BLexer *lexer, char first) {
+	int value = first - '0';
+	
+	while (isNumeric(peek(lexer))) {
+		value = value * 10 + (advance(lexer) - '0');
+	}
+	
+	BL_Token t = makeToken(lexer, LEX_NUMBER);
+	t.data.value = value;
+	
+	return t;
+}
+
+void printBLexToken(BL_Token t) {
+	printf("[Lexer] ");
 	switch (t.type) {
+		case LEX_INSTRUCTION:
+			printf("Instruction token   [%s]  - line %d - col %i\n", BReservedKeywords[t.data.keyword].string, t.line, t.col);
+			break;
+		case LEX_LABEL:
+			printf("Label token         [%.*s]  - line %d - col %i\n", t.data.string.length, t.data.string.start, t.line, t.col);
+		
+			break;
+		case LEX_PERIOD:
+			printf("Period token        [.]  - line %d - col %i\n", t.line, t.col);
+			break;
+		case LEX_COMMA:
+			printf("Comma token         [,]  - line %d - col %i\n", t.line, t.col);
+			break;
+		case LEX_AMPERSAND:
+			printf("Ampersand token     [&]  - line %d - col %i\n", t.line, t.col);
+			break;
+		case LEX_HASHTAG:
+			printf("Hashtag token       [#]  - line %d - col %i\n", t.line, t.col);
+			break;
+		case LEX_NUMBER:
+			printf("Number token        [%d]  - line %d - col %i\n", t.data.value, t.line, t.col);
+			break;
+		case LEX_NEWLINE:
+			printf("Newline token            - line %d - col %d\n", t.line, t.col);
+			break;
+		case LEX_EOF:
+			printf("EOF token                - line %d - col %d\n", t.line, t.col);
+			break;		
 		default:
-			printf("Unknown token - line: %i - col %i\n", t.line, t.col);
+			printf("Unknown token            - line: %d - col %d\n", t.line, t.col);
 			break;
 	}
 }
 
-BToken nextToken(BLexer *lexer) {
-	BToken t;
-	char c;
+void throwLexerError(BLexer *lexer, char offending_char) {
+	lexer->haderror = true;	
+	
+	printf("[Lexer] Error: invalid symbol '%c' on line %i - col %i\n", offending_char, lexer->line, lexer->col);
+}
+
+BL_Token nextToken(BLexer *lexer) {
+	if (lex_debug) {
+		printf("Fetching next token\n");
+	}
+	
+	if (isEof(lexer)) {
+		if (lex_debug) {
+			printf("Eof!\n");
+		}
+		
+		return makeToken(lexer, LEX_EOF);
+	}
 	
 	skipWhitespace(lexer);
 	
-	while (c != '\0') {
+	char c;
+	while (!isEof(lexer)) {
 		c = advance(lexer);
 		
 		switch (c) {
@@ -175,7 +298,11 @@ BToken nextToken(BLexer *lexer) {
 		}
 		
 		if (isNumeric(c)) {
-			return number(lexer);
+			return number(lexer, c);
+		}
+		
+		if (c != '\r') {
+			throwLexerError(lexer, c);
 		}
 	}
 }

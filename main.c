@@ -6,10 +6,18 @@
 
 int main(int argc, char *argv[]) {
 	BLexer *lexer = createBellowLexer("fibonacci.bellow");
+		
+	BL_Token t;
 	
-	BToken t = {LEX_NEWLINE, 10, 20};
-	
-	printBLexToken(t);
+	while (t.type != LEX_EOF) {
+		t = nextToken(lexer);
+		
+		printBLexToken(t);
+		
+		if (lexer->haderror) {
+			break;
+		}
+	}
 	
 	freeBellowLexer(lexer);
 	
