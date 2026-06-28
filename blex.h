@@ -14,16 +14,9 @@ typedef enum {
 	LEX_PERIOD, LEX_INSTRUCTION
 } BL_TokenType;
 
-typedef enum {
-	MOV, ADD, SUB, DIV, MUL, MOD, SHR, SHL, INC, DEC,
-	JMP, JNZ, JSR, JZ,
-	OUT, INPUT,
-	RET
-} BKeywordType;
-
 typedef struct {
 	const char *string;
-	BKeywordType keyword;
+	BKeyword keyword;
 } BL_Keyword;
 
 typedef struct {
@@ -38,11 +31,11 @@ typedef struct {
 	union {
 		int value;
 		BL_String string;
-		BKeywordType keyword;
+		BKeyword keyword;
 	} data;
 } BL_Token;
 
-BLexer *createBellowLexer(const char *source);
+BLexer createBellowLexer(const char *source);
 
 void freeBellowLexer(BLexer *lexer);
 

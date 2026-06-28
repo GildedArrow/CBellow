@@ -2,24 +2,26 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
+#include "bellow.h"
 #include "blex.h"
+#include "bparse.h"
 
 int main(int argc, char *argv[]) {
-	BLexer *lexer = createBellowLexer("fibonacci.bellow");
-		
+	BLexer lexer = createBellowLexer("fibonacci.bellow");
+	
 	BL_Token t;
 	
 	while (t.type != LEX_EOF) {
-		t = nextToken(lexer);
-		
-		printBLexToken(t);
-		
-		if (lexer->haderror) {
+		if (lexer.haderror) {
 			break;
 		}
+		
+		t = nextToken(&lexer);
+		
+		printBLexToken(t);
 	}
 	
-	freeBellowLexer(lexer);
+	freeBellowLexer(&lexer);
 	
 	return 0;
 }

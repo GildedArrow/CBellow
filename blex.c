@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <string.h>
 
+#include "bellow.h"
 #include "blex.h"
 
 /*static const char *BReservedKeywords[] = {
@@ -67,34 +68,27 @@ void loadSource(BLexer *lexer, const char *filename) {
 	
 	lexer->src[filesize] = '\0';
 	
-	
 	fclose(file);
 }
 
-BLexer *createBellowLexer(const char *source) {
-	BLexer *lexer = malloc(sizeof(BLexer));
+BLexer createBellowLexer(const char *source) {
+	BLexer lexer;
 	
-	if (lexer == NULL) {
-		perror("Unable to allocate memory for lexer");
-		return NULL;
-	}
+	loadSource(&lexer, source);
 	
-	loadSource(lexer, source);
-	
-	lexer->line = 1;
-	lexer->col = 1; 
-	lexer->pos = 0;
-	lexer->haderror = false;
+	lexer.line = 1;
+	lexer.col = 1; 
+	lexer.pos = 0;
+	lexer.haderror = false;
 	
 	return lexer;
 }
 
 void freeBellowLexer(BLexer *lexer) {
 	free(lexer->src);
-	free(lexer);
 }
 
-char advance(BLexer *lexer) {
+char BL_Advance(BLexer *lexer) {
 	char c = lexer->src[lexer->pos++];
 	
 	if (c == '\n') {
@@ -107,7 +101,7 @@ char advance(BLexer *lexer) {
 	return c;
 }
 
-char peek(BLexer *lexer) {
+char BL_Peek(BLexer *lexer) {
 	return lexer->src[lexer->pos];
 }
 
@@ -123,17 +117,17 @@ bool isAlphaNumeric(char c) {
 	return isAlpha(c) || isNumeric(c);
 }
 
-bool isEof(BLexer *lexer) {
+bool BL_isEof(BLexer *lexer) {
 	return lexer->src[lexer->pos] == '\0';
 }
 
 void skipWhitespace(BLexer *lexer) {
 	
 	for (;;) {
-		char c = peek(lexer);
+		char c = BL_Peek(lexer);
 		
 		if (c == ' ' || c == '\t' || c == '\r') {
-			advance(lexer);
+			BL_Advance(lexer);
 			
 			if (lex_debug) {
 				printf("Skipping whitespace\n");
@@ -143,8 +137,8 @@ void skipWhitespace(BLexer *lexer) {
 		}
 		
 		if (c == ';') {
-			while (!isEof(lexer) && peek(lexer) != '\n') {
-				advance(lexer);
+			while (!BL_isEof(lexer) && BL_Peek(lexer) != '\n') {
+				BL_Advance(lexer);
 			}
 			
 			if (lex_debug) {
@@ -178,8 +172,8 @@ BL_Token instructionOrLabel(BLexer *lexer) {
 	
 	int start = lexer->pos - 1;
 	
-	while (isAlphaNumeric(peek(lexer))) {
-		advance(lexer);
+	while (isAlphaNumeric(BL_Peek(lexer))) {
+		BL_Advance(lexer);
 	}
 	
 	int length = lexer->pos - start;
@@ -208,8 +202,8 @@ BL_Token instructionOrLabel(BLexer *lexer) {
 BL_Token number(BLexer *lexer, char first) {
 	int value = first - '0';
 	
-	while (isNumeric(peek(lexer))) {
-		value = value * 10 + (advance(lexer) - '0');
+	while (isNumeric(BL_Peek(lexer))) {
+		value = value * 10 + (BL_Advance(lexer) - '0');
 	}
 	
 	BL_Token t = makeToken(lexer, LEX_NUMBER);
@@ -266,7 +260,7 @@ BL_Token nextToken(BLexer *lexer) {
 		printf("Fetching next token\n");
 	}
 	
-	if (isEof(lexer)) {
+	if (BL_isEof(lexer)) {
 		if (lex_debug) {
 			printf("Eof!\n");
 		}
@@ -277,8 +271,8 @@ BL_Token nextToken(BLexer *lexer) {
 	skipWhitespace(lexer);
 	
 	char c;
-	while (!isEof(lexer)) {
-		c = advance(lexer);
+	while (!BL_isEof(lexer)) {
+		c = BL_Advance(lexer);
 		
 		switch (c) {
 			case '\n':
