@@ -7,21 +7,15 @@
 #include "bparse.h"
 
 int main(int argc, char *argv[]) {
+	
 	BLexer lexer = createBellowLexer("fibonacci.bellow");
+	BParser parser = createBellowParser(&lexer);
+	BProgram program = parseBProgram(&parser);
 	
-	BL_Token t;
 	
-	while (t.type != LEX_EOF) {
-		if (lexer.haderror) {
-			break;
-		}
-		
-		t = nextToken(&lexer);
-		
-		printBLexToken(t);
-	}
-	
+	freeBellowProgram(&program);
 	freeBellowLexer(&lexer);
+	freeBellowParser(&parser);
 	
 	return 0;
 }

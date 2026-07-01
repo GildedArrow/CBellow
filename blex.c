@@ -14,23 +14,23 @@
 */
 
 static const BL_Keyword BReservedKeywords[] = {
-	{"mov", MOV},
-	{"add", ADD},
-	{"sub", SUB},
-	{"div", DIV},
-	{"mul", MUL},
-	{"mod", MOD},
-	{"shr", SHR},
-	{"shl", SHL},
-	{"inc", INC},
-	{"dec", DEC},	
-	{"jmp", JMP},
-	{"jnz", JNZ},
-	{"jsr", JSR},
-	{"jz", JZ},
-	{"out", OUT},
+	{"mov",   MOV},
+	{"add",   ADD},
+	{"sub",   SUB},
+	{"div",   DIV},
+	{"mul",   MUL},
+	{"mod",   MOD},
+	{"shr",   SHR},
+	{"shl",   SHL},
+	{"inc",   INC},
+	{"dec",   DEC},	
+	{"jmp",   JMP},
+	{"jnz",   JNZ},
+	{"jsr",   JSR},
+	{"jz",    JZ},
+	{"out",   OUT},
 	{"input", INPUT},
-	{"ret", RET}
+	{"ret",   RET}
 };
 
 static bool lex_debug = false;

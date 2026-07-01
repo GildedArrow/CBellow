@@ -2,6 +2,7 @@
 #define BELLOW_H_INCLUDED
 
 #define CALLSTACK_SIZE 64
+#define MAX_ARGS 4
 
 typedef enum {
 	MOV, ADD, SUB, DIV, MUL, MOD, SHR, SHL, INC, DEC,
@@ -17,8 +18,8 @@ typedef struct {
 
 typedef struct {
 	BKeyword instruction;
-	BArgument *args;
-	int argcount;
+	BArgument args[MAX_ARGS];
+	int argscount;
 } BInstruction;
 
 typedef struct {

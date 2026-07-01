@@ -3,7 +3,8 @@
 ;License: Public Domain
 ;Description: Prints the first 10 fibonacci numbers
 
-mov 50, 0
+._test
+mov 10, 0
 mov 0, 1
 mov 1, 2
 .loop
@@ -18,4 +19,4 @@ mov #3, 2
 dec 0
 jnz loop, #0
 
-;10 0 1 0 0 0 0 0 0 0 0
+;10 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
