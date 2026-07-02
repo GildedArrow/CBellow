@@ -11,6 +11,18 @@ typedef enum {
 	RET
 } BKeyword;
 
+typedef enum {
+	MODE_NUMBER,
+	MODE_POINTER,
+	MODE_VALUE,
+	MODE_LABEL
+} ArgMode;
+
+typedef struct {
+	BKeyword keyword;
+	int argcount;
+} P_argcount;
+
 typedef struct {
 	int mode;
 	int value;
@@ -23,9 +35,12 @@ typedef struct {
 } BInstruction;
 
 typedef struct {
+	BInstruction *program;
+	
 	int callstack[CALLSTACK_SIZE];
 	
-	BInstruction *program;
+	int program_capacity;
+	int program_count;
 	
 	int pc;
 	int sp;
