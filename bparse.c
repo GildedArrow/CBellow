@@ -26,10 +26,14 @@ BParser createBellowParser(BLexer *lexer) {
 	
 	parser.current = nextToken(lexer);
 	parser.next = nextToken(lexer);
-	
+
+	parser.labelcount = 0;	
 	parser.labeldefcapacity = MINIMUM_LIST_SIZE;
 	parser.labels = malloc(sizeof(BLabelDefinition)*parser.labeldefcapacity);
-	parser.labelcount = 0;
+	
+	parser.labelrefcount = 0;
+	parser.labelrefcapacity = MINIMUM_LIST_SIZE;
+	parser.labelrefs = malloc(sizeof(BLabelReference)*parser.labelrefcapacity);
 	
 	parser.pc = 0;
 	
@@ -84,6 +88,10 @@ void printBLabelDefinition(BLabelDefinition label) {
 	printf("[Parser] [%.*s.%i]\n", label.string.length, label.string.start, label.line);
 }
 
+void printBLabelReference(BLabelReference label) {
+	printf("[Parser] [%.*s.%i.%i]\n", label.string.length, label.string.start, label.line, label.pos);
+}
+
 void printBInstruction(BInstruction instruction) {
 	printf("%i", instruction.instruction);
 	
@@ -94,13 +102,11 @@ void printBInstruction(BInstruction instruction) {
 	printf("\n");
 }
 
-void pushLabelDefinition(BParser *parser) {
+void pushLabelDefinition(BParser *parser, BProgram *program) {
 	BP_Advance(parser);
 	
 	BL_String str = parser->current.data.string;
-	
-	//printBLexToken(parser->current);
-	
+		
 	if (parser->labelcount >= parser->labeldefcapacity) {
 		parser->labeldefcapacity *= 2;
 		
@@ -114,8 +120,8 @@ void pushLabelDefinition(BParser *parser) {
 		parser->labels = temp;
 	}
 	
-	BLabelDefinition newlabel = {str, parser->pc};
-	
+	BLabelDefinition newlabel = {str, program->program_count};
+		
 	parser->labels[parser->labelcount++] = newlabel;
 }
 
@@ -131,8 +137,34 @@ int get_arg_count(BKeyword keyword) {
 	}
 }
 
-void pushLabelReference(BParser *parser) {
+/*
+	1. Collect all label definitions and their program counter in an array, and collect all label reference
+	2. On the second pass, point each
+*/
+
+void pushLabelReference(BParser *parser, BProgram *program, int pos) {
+	BLabelReference label;
 	
+	label.string = parser->current.data.string;
+	label.line = program->program_count;
+	label.pos = pos;
+	
+	if (parser->labelrefcount >= parser->labelrefcapacity) {
+		parser->labelrefcapacity *= 2;
+		
+		BLabelReference *temp = realloc(parser->labelrefs, parser->labelrefcapacity*sizeof(BLabelReference));
+		
+		if (temp == NULL) {
+			perror("Cannot reallocate memory for label reference stack");
+			return;
+		}
+		
+		parser->labelrefs = temp;
+	}
+	
+	printBLabelReference(label);
+	
+	parser->labelrefs[parser->labelrefcount++] = label;
 }
 
 void pushInstruction(BParser *parser, BProgram *program) {
@@ -189,6 +221,8 @@ void pushInstruction(BParser *parser, BProgram *program) {
 				arg.mode = MODE_LABEL;
 				arg.value = 0;
 				
+				pushLabelReference(parser, program, counted_args);
+				
 				break;
 			default:
 				throwParseError(parser, PARSE_EXPECTING_ARG);
@@ -228,9 +262,9 @@ void pushInstruction(BParser *parser, BProgram *program) {
 		program->program = temp;
 	}
 	
-	printBInstruction(instruction);
+	//printBInstruction(instruction);
 	
-	program->program[parser->pc++] = instruction;
+	program->program[program->program_count++] = instruction;
 }
 
 void parseNextInstruction(BParser *parser, BProgram *program) {
@@ -259,7 +293,7 @@ void parseNextInstruction(BParser *parser, BProgram *program) {
 				break;
 			}
 			
-			pushLabelDefinition(parser);
+			pushLabelDefinition(parser, program);
 			
 			if (parse_debug) {
 				printBLabelDefinition(parser->labels[parser->labelcount - 1]);
@@ -291,6 +325,18 @@ void parseNextInstruction(BParser *parser, BProgram *program) {
 	};
 }
 
+bool is_BL_String_Equal(BL_String str1, BL_String str2) {
+	if (str1.length != str2.length) {
+		return false;
+	}
+	
+	if (memcmp(str1.start, str2.start, str1.length) != 0) {
+		return false;
+	}
+	
+	return true;
+}
+
 BProgram parseBProgram(BParser *parser) {
 	BProgram program;
 	
@@ -320,6 +366,27 @@ BProgram parseBProgram(BParser *parser) {
 		BP_Advance(parser);
 	}
 	
+	//Second pass, this part was a bitch to code
+	for (int i = 0; i < parser->labelrefcount; i++) {
+		BLabelReference labelref = parser->labelrefs[i];
+		
+		for (int j = 0; j < parser->labelcount; j++) {
+			BLabelDefinition labeldef = parser->labels[j];
+			
+			//Found a matching label, go to its location and replace it with its program line
+			if (is_BL_String_Equal(labelref.string, labeldef.string)) {
+				program.program[labelref.line].args[labelref.pos].value = labeldef.line;
+				break;
+			}
+		}
+	}
+	
+	for (int i = 0; i < program.program_count; i++) {
+		BInstruction instruction = program.program[i];
+		
+		printBInstruction(instruction);
+	}
+	
 	return program;
 }
 
@@ -329,4 +396,5 @@ void freeBellowProgram(BProgram *program) {
 
 void freeBellowParser(BParser *parser) {
 	free(parser->labels);
+	free(parser->labelrefs);
 }
