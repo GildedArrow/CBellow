@@ -9,10 +9,10 @@
 
 #define MINIMUM_LIST_SIZE 8
 
-static bool parse_debug = false;
+static const bool parse_debug = false;
 
 static const P_argcount parse_argcounts[] = {
-	{MOV, 2}, {ADD, 3}, {SUB, 3}, {DIV, 3}, {MUL, 3}, {MOD, 3}, {SHR, 3}, {SHL, 3}, {INC, 1}, {DEC, 1},
+	{MOV, 2}, {ADD, 3}, {SUB, 3}, {DIV, 3}, {MUL, 3}, {MOD, 3}, {SHR, 2}, {SHL, 2}, {INC, 1}, {DEC, 1},
 	{JMP, 1}, {JNZ, 2},	{JSR, 1}, {JZ, 2},
 	{OUT, 2}, {INPUT, 1},
 	{RET, 0},
@@ -24,6 +24,7 @@ BParser createBellowParser(BLexer *lexer) {
 	parser.lexer = lexer;
 	parser.haderror = false;
 	
+
 	parser.current = nextToken(lexer);
 	parser.next = nextToken(lexer);
 
@@ -77,6 +78,9 @@ void throwParseError(BParser *parser, BParseErrorType errortype) {
 			break;
 		case PARSE_TOO_FEW_ARGS:
 			printf("Too few arguments for instruction on line %i\n", parser->current.line);
+			break;
+		case PARSE_EXPECTING_INSTRUCT:
+			printf("Expecting instruction on line %i\n", parser->current.line);
 			break;
 		default:
 			printf("Unknown error on line %i\n", parser->current.line);
@@ -162,15 +166,23 @@ void pushLabelReference(BParser *parser, BProgram *program, int pos) {
 		parser->labelrefs = temp;
 	}
 	
-	printBLabelReference(label);
+	//printBLabelReference(label);
 	
 	parser->labelrefs[parser->labelrefcount++] = label;
 }
 
-void pushInstruction(BParser *parser, BProgram *program) {
-	BInstruction instruction;
+BInstruction parseInstruction(BParser *parser, BProgram *program) {
+	BInstruction instruction = {0};
 	
 	BL_Token command = parser->current;
+	
+	if (command.type == LEX_LABEL) {
+		throwParseError(parser, PARSE_UNRECOGNIZED_KEYWORD);
+		return instruction;
+	} else if (command.type != LEX_INSTRUCTION) {
+		throwParseError(parser, PARSE_EXPECTING_INSTRUCT);
+		return instruction;		
+	}
 	
 	instruction.instruction = command.data.keyword;
 	
@@ -179,8 +191,8 @@ void pushInstruction(BParser *parser, BProgram *program) {
 	int expected_argcount = get_arg_count(instruction.instruction);
 	
 	instruction.argscount = expected_argcount;
-	
-	while (parser->current.type != LEX_NEWLINE) {
+
+	while (parser->current.type != LEX_NEWLINE && parser->current.type != LEX_EOF) {
 		BP_Advance(parser);
 		
 		BArgument arg;
@@ -196,7 +208,7 @@ void pushInstruction(BParser *parser, BProgram *program) {
 				
 				if (parser->next.type != LEX_NUMBER) {
 					throwParseError(parser, PARSE_EXPECTING_NUMBER);
-					return;
+					return instruction;
 				}
 				
 				BP_Advance(parser);
@@ -209,7 +221,7 @@ void pushInstruction(BParser *parser, BProgram *program) {
 				
 				if (parser->next.type != LEX_NUMBER) {
 					throwParseError(parser, PARSE_EXPECTING_NUMBER);
-					return;
+					return instruction;
 				}
 				
 				BP_Advance(parser);
@@ -224,30 +236,40 @@ void pushInstruction(BParser *parser, BProgram *program) {
 				pushLabelReference(parser, program, counted_args);
 				
 				break;
+			case LEX_NEWLINE:
+			case LEX_EOF:
+				break;
 			default:
+				//printBLexToken(parser->current);
 				throwParseError(parser, PARSE_EXPECTING_ARG);
-				return;
+				return instruction;
 		}
 		
 		instruction.args[counted_args++] = arg;
 		
 		if (parser->next.type != LEX_COMMA && expected_argcount != counted_args) {
-			if (parser->next.type == LEX_NEWLINE) { //incorrect number of arguments?
+			if (parser->next.type == LEX_NEWLINE || parser->next.type == LEX_EOF) { //incorrect number of arguments?
 				if (counted_args > expected_argcount) {
 					throwParseError(parser, PARSE_TOO_MANY_ARGS);
-					return;
+					return instruction;
 				} else {
 					throwParseError(parser, PARSE_TOO_FEW_ARGS);
-					return;
+					return instruction;
 				}
 			}
 			
 			throwParseError(parser, PARSE_EXPECTING_COMMA);
-			return;
+			return instruction;
 		} else {
 			BP_Advance(parser);
 		}
 	}
+	
+	return instruction;
+}
+
+void pushInstruction(BParser *parser, BProgram *program) {
+	BInstruction instruction = parseInstruction(parser, program);
 	
 	if (program->program_count >= program->program_capacity) {
 		program->program_capacity *= 2;
@@ -265,6 +287,7 @@ void pushInstruction(BParser *parser, BProgram *program) {
 	//printBInstruction(instruction);
 	
 	program->program[program->program_count++] = instruction;
+	return;
 }
 
 void parseNextInstruction(BParser *parser, BProgram *program) {
@@ -276,7 +299,7 @@ void parseNextInstruction(BParser *parser, BProgram *program) {
 	2. Calling a function (mov, add, jmp, etc.)
 	
 	*/
-	
+
 	while (parser->current.type == LEX_NEWLINE) {
 		BP_Advance(parser);
 	}
@@ -293,6 +316,7 @@ void parseNextInstruction(BParser *parser, BProgram *program) {
 				break;
 			}
 			
+			
 			pushLabelDefinition(parser, program);
 			
 			if (parse_debug) {
@@ -304,11 +328,13 @@ void parseNextInstruction(BParser *parser, BProgram *program) {
 				break;
 			}
 			
+			
 			break;
 		case LEX_INSTRUCTION:
 			if (parse_debug) {
 				printf("[Parser] Parsing instruction\n");
 			}
+			
 			
 			pushInstruction(parser, program);
 
@@ -337,14 +363,9 @@ bool is_BL_String_Equal(BL_String str1, BL_String str2) {
 	return true;
 }
 
-BProgram parseBProgram(BParser *parser) {
+BProgram createBellowProgram(BParser *parser) {
 	BProgram program;
-	
-	//initialize program struct data
-	program.pc = 0;
-	program.sp = 0;
-	memset(program.callstack, 0, sizeof(program.callstack)); //zero out callstack
-	
+
 	program.program_capacity = MINIMUM_LIST_SIZE;
 	program.program_count = 0;
 	
@@ -354,6 +375,12 @@ BProgram parseBProgram(BParser *parser) {
 		printf("[Parser] Error: cannot allocate memory to initialize program");
 		parser->haderror = true;
 	}
+	
+	return program;
+}
+
+BProgram parseBProgram(BParser *parser) {
+	BProgram program = createBellowProgram(parser);
 	
 	//First pass
 	while (parser->current.type != LEX_EOF) {
@@ -366,7 +393,7 @@ BProgram parseBProgram(BParser *parser) {
 		BP_Advance(parser);
 	}
 	
-	//Second pass, this part was a bitch to code
+	//Second pass, this part was a bitch to figure out
 	for (int i = 0; i < parser->labelrefcount; i++) {
 		BLabelReference labelref = parser->labelrefs[i];
 		
@@ -381,11 +408,13 @@ BProgram parseBProgram(BParser *parser) {
 		}
 	}
 	
+	/*
 	for (int i = 0; i < program.program_count; i++) {
 		BInstruction instruction = program.program[i];
 		
 		printBInstruction(instruction);
 	}
+	*/
 	
 	return program;
 }

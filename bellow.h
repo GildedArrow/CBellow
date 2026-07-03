@@ -1,7 +1,6 @@
 #ifndef BELLOW_H_INCLUDED
 #define BELLOW_H_INCLUDED
 
-#define CALLSTACK_SIZE 64
 #define MAX_ARGS 4
 
 typedef enum {
@@ -36,15 +35,14 @@ typedef struct {
 
 typedef struct {
 	BInstruction *program;
-	
-	int callstack[CALLSTACK_SIZE];
-	
+		
 	int program_capacity;
 	int program_count;
-	
-	int pc;
-	int sp;
 } BProgram;
 
+
+void saveBellowProgram(BProgram *program, const char* filename);
+
+BProgram loadBellowProgram(const char* filename);
 
 #endif

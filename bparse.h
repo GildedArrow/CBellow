@@ -5,7 +5,7 @@ typedef enum {
 	PARSE_UNRECOGNIZED_KEYWORD,
 	
 	PARSE_EXPECTING_INSTRUCT_OR_LABEL, PARSE_EXPECTING_LABEL_DEF, PARSE_EXPECTING_NEWLINE,
-	PARSE_EXPECTING_COMMA, PARSE_EXPECTING_NUMBER, PARSE_EXPECTING_ARG,
+	PARSE_EXPECTING_COMMA, PARSE_EXPECTING_NUMBER, PARSE_EXPECTING_ARG, PARSE_EXPECTING_INSTRUCT,
 	
 	PARSE_TOO_MANY_ARGS, PARSE_TOO_FEW_ARGS,
 	
@@ -46,6 +46,20 @@ typedef struct {
 BParser createBellowParser(BLexer *lexer);
 
 BProgram parseBProgram(BParser *parser);
+
+int get_arg_count(BKeyword keyword);
+
+void flush_input_buffer();
+
+void printBInstruction(BInstruction instruction);
+
+BProgram createBellowProgram(BParser *parser);
+
+BInstruction parseInstruction(BParser *parser, BProgram *program);
+
+void pushInstruction(BParser *parser, BProgram *program);
+
+void parseNextInstruction(BParser *parser, BProgram *program);
 
 void freeBellowProgram(BProgram *program);
 
