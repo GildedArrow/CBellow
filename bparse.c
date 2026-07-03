@@ -13,7 +13,7 @@ static const bool parse_debug = false;
 
 static const P_argcount parse_argcounts[] = {
 	{MOV, 2}, {ADD, 3}, {SUB, 3}, {DIV, 3}, {MUL, 3}, {MOD, 3}, {SHR, 2}, {SHL, 2}, {INC, 1}, {DEC, 1},
-	{JMP, 1}, {JNZ, 2},	{JSR, 1}, {JZ, 2},
+	{JMP, 1}, {JNZ, 2},	{JSR, 1}, {JZ, 2}, {JE, 3}, {JNE, 3},
 	{OUT, 2}, {INPUT, 1},
 	{RET, 0},
 };
@@ -81,6 +81,9 @@ void throwParseError(BParser *parser, BParseErrorType errortype) {
 			break;
 		case PARSE_EXPECTING_INSTRUCT:
 			printf("Expecting instruction on line %i\n", parser->current.line);
+			break;
+		case PARSE_UNDEFINED_LABEL:
+			printf("Undefined label on line %i\n", parser->current.line);
 			break;
 		default:
 			printf("Unknown error on line %i\n", parser->current.line);
@@ -245,11 +248,14 @@ BInstruction parseInstruction(BParser *parser, BProgram *program) {
 				return instruction;
 		}
 		
-		instruction.args[counted_args++] = arg;
-		
+		if (parser->current.type != LEX_NEWLINE && parser->current.type != LEX_EOF) {
+			instruction.args[counted_args++] = arg;
+		}
+
 		if (parser->next.type != LEX_COMMA && expected_argcount != counted_args) {
 			if (parser->next.type == LEX_NEWLINE || parser->next.type == LEX_EOF) { //incorrect number of arguments?
 				if (counted_args > expected_argcount) {
+					printf("%i\n", counted_args);
 					throwParseError(parser, PARSE_TOO_MANY_ARGS);
 					return instruction;
 				} else {
@@ -323,7 +329,7 @@ void parseNextInstruction(BParser *parser, BProgram *program) {
 				printBLabelDefinition(parser->labels[parser->labelcount - 1]);
 			}
 			
-			if (parser->next.type != LEX_NEWLINE) {
+			if (parser->next.type != LEX_NEWLINE && parser->next.type != LEX_EOF) {
 				throwParseError(parser, PARSE_EXPECTING_NEWLINE);
 				break;
 			}
@@ -397,14 +403,22 @@ BProgram parseBProgram(BParser *parser) {
 	for (int i = 0; i < parser->labelrefcount; i++) {
 		BLabelReference labelref = parser->labelrefs[i];
 		
+		bool found_definition = false;
+		
 		for (int j = 0; j < parser->labelcount; j++) {
 			BLabelDefinition labeldef = parser->labels[j];
 			
 			//Found a matching label, go to its location and replace it with its program line
 			if (is_BL_String_Equal(labelref.string, labeldef.string)) {
 				program.program[labelref.line].args[labelref.pos].value = labeldef.line;
+				found_definition = true;
 				break;
 			}
+		}
+		
+		if (!found_definition) {
+			throwParseError(parser, PARSE_UNDEFINED_LABEL);
+			return program;
 		}
 	}
 	

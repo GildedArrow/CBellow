@@ -31,6 +31,8 @@ static const BL_Keyword BReservedKeywords[] = {
 	{"jnz",   JNZ},
 	{"jsr",   JSR},
 	{"jz",    JZ},
+	{"je",    JE},
+	{"jne",   JNE},
 	{"out",   OUT},
 	{"input", INPUT},
 	{"ret",   RET}
