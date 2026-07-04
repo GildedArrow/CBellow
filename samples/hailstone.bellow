@@ -1,0 +1,42 @@
+;Hailstone sequence in Bellow
+;Author: Will Terry
+;License: Public Domain
+;Description: Prints a given hailstone sequence as well as its length
+
+jmp _start
+
+.hailstone
+	mov #0, 1
+	mov 1, 3
+
+	out #1, 0
+	out 10, 1
+
+	.loop
+		inc 3
+
+		mod #1, 2, 2
+
+		jne odd, #2, 0
+		div #1, 2, 1
+		jmp skip
+
+		.odd
+			mul #1, 3, 1
+			inc 1
+
+		.skip
+			out #1, 0
+			out 10, 1
+
+	jne loop, #1, 1
+
+	ret
+
+._start
+	mov 27, 0
+	jsr hailstone
+
+	out 10, 1
+	out #3, 0
+	out 10, 1

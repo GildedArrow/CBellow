@@ -1,22 +1,23 @@
 jmp _start
 
-
 .factorial
-mov 1, 1
-mov 1, 2
+	mov 1, 1
+	mov 1, 2
 
-.loop
+	.loop
 
-mul #1, #2, 1
-inc 2
+		mul #1, #2, 1
+		inc 2
 
-jne loop, #2, #0
+	jne loop, #2, #0
 
-ret
+	ret
 
 
 ._start
-mov 10, 0
-jsr factorial
-out #1, 0
-out 10, 1
+	mov 10, 0
+	
+	jsr factorial
+	
+	out #1, 0
+	out 10, 1
