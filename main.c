@@ -8,8 +8,8 @@
 #include "bparse.h"
 #include "binterpreter.h"
 
-#define MAX_INPUT_BUFFER_SIZE 64
-#define MAX_INPUT_BUFFER_SIZESTR "64"
+#define MAX_INPUT_BUFFER_SIZE 256
+#define MAX_INPUT_BUFFER_SIZESTR "256"
 
 bool strings_equal(const char *str1, const char *str2) {
 	if (strlen(str1) != strlen(str2)) {
@@ -37,7 +37,6 @@ BLexer createBellowLexerFromString(char *str) {
 }
 
 void repl() {
-	BInterpreter interpreter = createBellowInterpreter();
 	
 	char input_buffer[MAX_INPUT_BUFFER_SIZE];
 	
@@ -47,26 +46,29 @@ void repl() {
 	for (;;) {
 		printf("\n> ");
 		scanf("%" MAX_INPUT_BUFFER_SIZESTR "[^\n]", input_buffer);
-		printf(" %s\n", input_buffer);
+		printf("%s\n", input_buffer);
 		flush_input_buffer();
 		
 		if (strings_equal(input_buffer, "exit")) {
 			break;
 		}
-		
+		BInterpreter interpreter = createBellowInterpreter();
+
 		
 		BLexer lexer = createBellowLexerFromString(input_buffer);
 		BParser parser = createBellowParser(&lexer);
 		
-		BProgram program = createBellowProgram(&parser);
+		BProgram program = parseBProgram(&parser);
 
-		BInstruction instruction = parseInstruction(&parser, &program);
+		//BInstruction instruction = parseInstruction(&parser, &program);
 		
 		if (lexer.haderror || parser.haderror) {
 			continue;
 		}
 		
-		executeBellowInstruction(&interpreter, instruction);
+		runBellowInterpreter(&interpreter, &program);
+		
+		//executeBellowInstruction(&interpreter, instruction);
 		
 		freeBellowProgram(&program);
 		freeBellowParser(&parser);
@@ -75,27 +77,6 @@ void repl() {
 }
 
 int main(int argc, char *argv[]) {
-	
-	/*
-	BLexer lexer = createBellowLexer("fibonacci.bellow");
-	BParser parser = createBellowParser(&lexer);
-	BProgram program = parseBProgram(&parser);
-	
-	saveBellowProgram(&program, "fibonacci.bec");
-	
-	
-	BProgram program2 = loadBellowProgram("fibonacci.bec");
-	BInterpreter interpreter = createBellowInterpreter();
-	
-	freeBellowParser(&parser);
-	freeBellowLexer(&lexer);
-	
-	runBellowInterpreter(&interpreter, &program2);
-	
-	
-	freeBellowProgram(&program);
-	*/
-	
 	/*
 	Usage:
 		

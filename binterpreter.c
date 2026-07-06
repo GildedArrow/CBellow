@@ -9,11 +9,29 @@
 
 static const bool runtime_debug = false;
 
+void throwRuntimeError(BInterpreter *interpreter, BRuntimeErrorType errortype) {
+	interpreter->haderror = true;
+	
+	printf("[Runtime Error] ");
+	
+	switch (errortype) {
+		case MEMORY_INDEX_OUT_OF_BOUNDS:
+			printf("Memory index out of bounds.\n");
+		default:
+			printf("Unknown error\n");
+	}
+}
+
 int get_number(BInterpreter *interpreter, BArgument arg) {
 	switch (arg.mode) {
 		case MODE_NUMBER:
 			return arg.value;
 		case MODE_VALUE:
+			if (arg.value >= MEMORY_SIZE || arg.value < 0) {
+				throwRuntimeError(interpreter, MEMORY_INDEX_OUT_OF_BOUNDS);
+				return 0;
+			}
+		
 			return interpreter->memory[arg.value];
 		case MODE_POINTER:
 			return interpreter->memory[interpreter->memory[arg.value]];
@@ -120,7 +138,7 @@ void op_out(BInterpreter *interpreter, BArgument *args) {
 			printf("%i", get_number(interpreter, args[0]));
 			return;
 		case 1:
-			printf("%c", get_number(interpreter, args[0]));
+			printf("%c", (char)get_number(interpreter, args[0]));
 			return;
 	}
 }

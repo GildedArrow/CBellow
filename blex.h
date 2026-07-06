@@ -9,9 +9,13 @@ typedef struct {
 } BLexer;
 
 typedef enum {
+	LEX_ILLEGAL_CHARACTER, LEX_MALFORMED_STRING
+} BLexErrorType;
+
+typedef enum {
 	LEX_EOF, LEX_NUMBER, LEX_AMPERSAND, LEX_HASHTAG,
 	LEX_LABEL, LEX_COMMA, LEX_NEWLINE,
-	LEX_PERIOD, LEX_INSTRUCTION
+	LEX_PERIOD, LEX_INSTRUCTION, LEX_MINUS
 } BL_TokenType;
 
 typedef struct {

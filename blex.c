@@ -6,13 +6,6 @@
 #include "bellow.h"
 #include "blex.h"
 
-/*static const char *BReservedKeywords[] = {
-	"mov", "add", "sub", "div", "mul", "mod",
-	"out", "jmp", "jnz", "jsr", "jz", "ret",
-	"inc", "dec", "cmp", "inp"
-};
-*/
-
 static const bool lex_debug = false;
 
 
@@ -38,23 +31,36 @@ static const BL_Keyword BReservedKeywords[] = {
 	{"ret",   RET}
 };
 
+void throwLexerError(BLexer *lexer, BLexErrorType errortype) {
+	lexer->haderror = true;	
+	
+	printf("[Lexer Error] ");
+	
+	switch (errortype) {
+		case LEX_ILLEGAL_CHARACTER:
+			printf("Illegal symbol '%c' on line %i - col %i\n", lexer->src[lexer->pos - 1], lexer->line, lexer->col - 1);
+			break;
+		default:
+			printf("Unknown error on line %i, col %i\n", lexer->line, lexer->col - 1);
+	}
+}
 
 void loadSource(BLexer *lexer, const char *filename) {
 	FILE *file = fopen(filename, "rb");
 	
 	if (file == NULL) {
-		perror("Error opening source file");
+		perror("[I/O Error] Failed to open source file");
 		return;
 	}
 	if (fseek(file, 0, SEEK_END) != 0) {
-		perror("Error seeking source file");
+		perror("[I/O Error] Failed to seek source file");
 		fclose(file);
 		return;
 	}
 	
 	long filesize = ftell(file);
 	if (filesize < 0) {
-		perror("Error getting source file size");
+		perror("[I/O Error] Failed to determine source file size");
 		fclose(file);
 		return;
 	}
@@ -63,7 +69,7 @@ void loadSource(BLexer *lexer, const char *filename) {
 	
 	lexer->src = malloc(filesize + 1);
 	if (lexer->src == NULL) {
-		perror("Error allocating memory for source buffer");
+		perror("[Memory Error] Failed to allocate memory for source buffer");
 		fclose(file);
 		return;
 	}
@@ -109,6 +115,10 @@ char BL_Peek(BLexer *lexer) {
 	return lexer->src[lexer->pos];
 }
 
+char BL_PeekNext(BLexer *lexer) {
+	return lexer->src[lexer->pos + 1];
+}
+
 bool isAlpha(char c) {
 	return (c > 64 && c < 91) || (c > 96 && c < 123) || (c == 95);
 }
@@ -122,7 +132,7 @@ bool isAlphaNumeric(char c) {
 }
 
 bool BL_isEof(BLexer *lexer) {
-	return lexer->src[lexer->pos] == '\0';
+	return BL_Peek(lexer) == '\0';
 }
 
 void skipWhitespace(BLexer *lexer) {
@@ -140,7 +150,7 @@ void skipWhitespace(BLexer *lexer) {
 			continue;
 		}
 		
-		if (c == ';') {
+		if (c == '-' && BL_PeekNext(lexer) == '-') {
 			while (!BL_isEof(lexer) && BL_Peek(lexer) != '\n') {
 				BL_Advance(lexer);
 			}
@@ -165,6 +175,7 @@ BL_Token makeToken(BLexer *lexer, BL_TokenType type) {
 	
 	if (lex_debug) {
 		printf("MAKING TOKEN %d %d\n", t.line, t.col);
+		printf("%i", t.type);
 	}
 	
 	return t;
@@ -185,7 +196,6 @@ BL_Token instructionOrLabel(BLexer *lexer) {
 	char *startpos = lexer->src + start;
 	BL_Token t;
 	
-
 	for (int i = 0; i < keyword_count; i++) {
 		BL_Keyword k = BReservedKeywords[i];
 
@@ -206,17 +216,7 @@ BL_Token instructionOrLabel(BLexer *lexer) {
 }
 
 BL_Token number(BLexer *lexer, char first) {
-	bool negative = false;
 	BL_Token t = makeToken(lexer, LEX_NUMBER);
-
-	if (first == '-') {
-		negative = true;
-		if (!isNumeric(BL_Peek(lexer))) {
-			printf("[Lexer] Error: Malformed string on line %i, col %i\n", lexer->line, lexer->col);
-			lexer->haderror = true;
-			return t;
-		}
-	}
 	
 	int value = first - '0';
 	
@@ -225,11 +225,7 @@ BL_Token number(BLexer *lexer, char first) {
 	}
 	
 	
-	if (!negative) {
-		t.data.value = value;
-	} else {
-		t.data.value = -value;
-	}
+	t.data.value = value;
 	return t;
 }
 
@@ -270,12 +266,6 @@ void printBLexToken(BL_Token t) {
 	}
 }
 
-void throwLexerError(BLexer *lexer, char offending_char) {
-	lexer->haderror = true;	
-	
-	printf("[Lexer] Error: invalid symbol '%c' on line %i - col %i\n", offending_char, lexer->line, lexer->col - 1);
-}
-
 BL_Token nextToken(BLexer *lexer) {
 	if (lex_debug) {
 		printf("Fetching next token\n");
@@ -289,6 +279,7 @@ BL_Token nextToken(BLexer *lexer) {
 		return makeToken(lexer, LEX_EOF);
 	}
 	
+
 	skipWhitespace(lexer);
 
 	char c;
@@ -296,7 +287,9 @@ BL_Token nextToken(BLexer *lexer) {
 		c = BL_Advance(lexer);
 		
 		switch (c) {
+			case ';':
 			case '\n':
+
 				return makeToken(lexer, LEX_NEWLINE);
 			case '.':
 				return makeToken(lexer, LEX_PERIOD);
@@ -307,7 +300,10 @@ BL_Token nextToken(BLexer *lexer) {
 			case '#':
 				return makeToken(lexer, LEX_HASHTAG);
 			case '-':
-				return number(lexer, c);
+
+				if (BL_PeekNext(lexer) != '-') {
+					return makeToken(lexer, LEX_MINUS);
+				}
 		}
 		
 		if (isAlpha(c)) {
@@ -319,7 +315,8 @@ BL_Token nextToken(BLexer *lexer) {
 		}
 		
 		if (c != '\r') {
-			throwLexerError(lexer, c);
+			throwLexerError(lexer, LEX_ILLEGAL_CHARACTER);
+			continue;
 		}
 	}
 }

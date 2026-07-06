@@ -49,7 +49,7 @@ BL_Token BP_Advance(BParser *parser) {
 void throwParseError(BParser *parser, BParseErrorType errortype) {
 	parser->haderror = true;
 	
-	printf("[Parser] Error: ");
+	printf("[Parser Error] ");
 	
 	switch (errortype) {
 		case PARSE_UNRECOGNIZED_KEYWORD:
@@ -175,7 +175,13 @@ void pushLabelReference(BParser *parser, BProgram *program, int pos) {
 }
 
 BInstruction parseInstruction(BParser *parser, BProgram *program) {
+
+	
 	BInstruction instruction = {0};
+	
+	if (parser->lexer->haderror) {
+		return instruction;
+	}
 	
 	BL_Token command = parser->current;
 	
@@ -378,7 +384,7 @@ BProgram createBellowProgram(BParser *parser) {
 	program.program = malloc(sizeof(BInstruction)*program.program_capacity);
 	
 	if (program.program == NULL) {
-		printf("[Parser] Error: cannot allocate memory to initialize program");
+		perror("[Memory Error] Cannot allocate memory to initialize program");
 		parser->haderror = true;
 	}
 	
@@ -387,7 +393,7 @@ BProgram createBellowProgram(BParser *parser) {
 
 BProgram parseBProgram(BParser *parser) {
 	BProgram program = createBellowProgram(parser);
-	
+
 	//First pass
 	while (parser->current.type != LEX_EOF) {
 		parseNextInstruction(parser, &program);
@@ -398,6 +404,7 @@ BProgram parseBProgram(BParser *parser) {
 		
 		BP_Advance(parser);
 	}
+	
 	
 	//Second pass, this part was a bitch to figure out
 	for (int i = 0; i < parser->labelrefcount; i++) {
@@ -422,13 +429,13 @@ BProgram parseBProgram(BParser *parser) {
 		}
 	}
 	
-	/*
-	for (int i = 0; i < program.program_count; i++) {
-		BInstruction instruction = program.program[i];
-		
-		printBInstruction(instruction);
+	if (parse_debug) {
+		for (int i = 0; i < program.program_count; i++) {
+			BInstruction instruction = program.program[i];
+			
+			printBInstruction(instruction);
+		}
 	}
-	*/
 	
 	return program;
 }
