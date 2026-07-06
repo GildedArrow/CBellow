@@ -1,3 +1,7 @@
+--Factorial subroutine in Bellow
+--Author: Will Terry
+--Description: Prints the factorial of a given number
+
 jmp _start
 
 .factorial

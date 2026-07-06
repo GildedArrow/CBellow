@@ -1,7 +1,6 @@
-;Hailstone sequence in Bellow
-;Author: Will Terry
-;License: Public Domain
-;Description: Prints a given hailstone sequence as well as its length
+--Hailstone sequence in Bellow
+--Author: Will Terry
+--Description: Prints a given hailstone sequence of a given number as well as its length
 
 jmp _start
 
