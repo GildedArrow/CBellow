@@ -132,6 +132,18 @@ void op_jne(BInterpreter *interpreter, BArgument *args) {
 	}
 }
 
+void op_jle(BInterpreter *interpreter, BArgument *args) {
+	if (get_number(interpreter, args[1]) < get_number(interpreter, args[2])) {
+		interpreter->pc = get_number(interpreter, args[0]);
+	}
+}
+
+void op_jgr(BInterpreter *interpreter, BArgument *args) {
+	if (get_number(interpreter, args[1]) > get_number(interpreter, args[2])) {
+		interpreter->pc = get_number(interpreter, args[0]);
+	}	
+}
+
 void op_out(BInterpreter *interpreter, BArgument *args) {
 	switch (get_number(interpreter, args[1])) {
 		case 0:
@@ -170,6 +182,8 @@ static const bellow_instruction BJump_Table[] = {
 	[JZ] = op_jz,
 	[JE] = op_je,
 	[JNE] = op_jne,
+	[JLE] = op_jle,
+	[JGR] = op_jgr,
 	[OUT] = op_out,
 	[INPUT] = op_input,
 	[RET] = op_ret

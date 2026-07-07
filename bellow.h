@@ -5,7 +5,7 @@
 
 typedef enum {
 	MOV, ADD, SUB, DIV, MUL, MOD, SHR, SHL, INC, DEC,
-	JMP, JNZ, JSR, JZ, JE, JNE,
+	JMP, JNZ, JSR, JZ, JE, JNE, JLE, JGR,
 	OUT, INPUT,
 	RET
 } BKeyword;

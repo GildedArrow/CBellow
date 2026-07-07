@@ -13,7 +13,7 @@ static const bool parse_debug = false;
 
 static const P_argcount parse_argcounts[] = {
 	{MOV, 2}, {ADD, 3}, {SUB, 3}, {DIV, 3}, {MUL, 3}, {MOD, 3}, {SHR, 2}, {SHL, 2}, {INC, 1}, {DEC, 1},
-	{JMP, 1}, {JNZ, 2},	{JSR, 1}, {JZ, 2}, {JE, 3}, {JNE, 3},
+	{JMP, 1}, {JNZ, 2},	{JSR, 1}, {JZ, 2}, {JE, 3}, {JNE, 3}, {JLE, 3}, {JGR, 3},
 	{OUT, 2}, {INPUT, 1},
 	{RET, 0},
 };
